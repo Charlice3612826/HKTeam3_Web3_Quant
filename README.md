@@ -20,10 +20,14 @@ python test_backtest.py
 
 ## Backtest Strategy
 Construct a new class describing your strategy in backtest_strategy.py
+
 The format can follow the previous class strategy in the python file
+
 Upon adding the strategy class, go to test_backtest.py to import it and add it in strategies list
+
 Then run test_backtest.py file to check new strategy results
-Crypto type, data interval and data period can also be modified in data inside test_backtest.py (May 1,2025 - Oct 31, 2025,  15m is recommended)
+
+Crypto type, data interval and data period can also be modified in data inside test_backtest.py (May 1,2025 - Oct 31, 2025,  15m is recommended for better results)
 
 ## Project Structure
 
