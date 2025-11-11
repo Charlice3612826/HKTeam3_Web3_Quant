@@ -1,13 +1,13 @@
 import time
 import schedule
 from api_client import client  # 导入我们创建的客户端
-from strategy import SimpleStrategy, QuickTestStrategy
+from strategy import SimpleStrategy, QuickTestStrategy，OpeningRangeBreakoutStrategy
 import config
 
 class TradingBot:
     def __init__(self):
         self.client = client
-        self.strategy = QuickTestStrategy()
+        self.strategy = OpeningRangeBreakoutStrategy()
         self.running = True
         
     def test_connection(self):
