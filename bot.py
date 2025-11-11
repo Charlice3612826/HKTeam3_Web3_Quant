@@ -30,56 +30,61 @@ class TradingBot:
         result = self.client.get_ticker('BTC/USD')
         print(f"BTC行情: {result}")
     
+    import logging
+
     def run_once(self):
         """执行一次完整的交易循环"""
         try:
             print("\n" + "="*50)
             print("开始交易循环...")
-            
-            # 1. 获取市场数据
-            market_data = self.client.get_ticker('BTC/USD')
-            print(f"市场数据获取: {'成功' if market_data.get('Success') else '失败'}")
-            
-            if market_data.get('Success'):
-                ticker = market_data['Data']['BTC/USD']
-                current_price = ticker['LastPrice']
-                print(f"当前BTC价格: ${current_price}")
-                
-                # 2. 生成交易信号
-                signal = self.strategy.generate_signal(market_data)
-                print(f"交易信号: {signal}")
-                
-                # 3. 执行交易（使用最小交易量）
-                if signal == 'BUY':
-                    print("🟢 执行买入操作...")
-                    # 最小交易量：0.0001 BTC（约$10）
-                    result = self.client.place_order(
-                        pair='BTC/USD',
-                        side='BUY',
-                        order_type='MARKET',
-                        quantity=0.0001  # 最小交易量
-                    )
-                    print(f"买入结果: {result}")
-                    
-                elif signal == 'SELL':
-                    print("🔴 执行卖出操作...")
-                    # 最小交易量：0.0001 BTC
-                    result = self.client.place_order(
-                        pair='BTC/USD',
-                        side='SELL',
-                        order_type='MARKET', 
-                        quantity=0.0001  # 最小交易量
-                    )
-                    print(f"卖出结果: {result}")
-            
-            # 4. 检查账户状态
+    
+            # 初始化日志路径
+            today = datetime.now().strftime('%Y-%m-%d')
+            os.makedirs("logs", exist_ok=True)
+            log_file = f'logs/{today}.log'
+            logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(message)s')
+    
+            # 1. 获取历史K线数据
+            ohlcv = self.client.get_ohlcv('BTC/USD', '15m', 100)
+            if not ohlcv:
+                print("❌ 获取K线数据失败，跳过本轮")
+                return
+    
+            df = self.client.convert_to_dataframe(ohlcv)
+            if df.empty:
+                print("⚠️ K线数据为空")
+                return
+    
+            # 2. 生成交易信号
+            signal_df = self.strategy.generate_signals(df)
+            latest_signal = signal_df['signal'].iloc[-1]
+            current_price = df['close'].iloc[-1]
+            print(f"📈 当前价格: {current_price}, 信号: {latest_signal}")
+    
+            # 3. 执行交易
+            if latest_signal == 1:
+                print("🟢 执行买入...")
+                result = self.client.place_order('BTC/USD', 'BUY', 'MARKET', 0.0001)
+                print(f"✅ 买入结果: {result}")
+                logging.info(f"BUY at {current_price}, result: {result}")
+            elif latest_signal == -1:
+                print("🔴 执行卖出...")
+                result = self.client.place_order('BTC/USD', 'SELL', 'MARKET', 0.0001)
+                print(f"✅ 卖出结果: {result}")
+                logging.info(f"SELL at {current_price}, result: {result}")
+            else:
+                print("⏸ 无交易信号")
+    
+            # 4. 打印余额
             account = self.client.get_balance()
-            if account.get('Success'):
+            if account.get("Success"):
                 usd_balance = account['SpotWallet']['USD']['Free']
-                print(f"💰 账户USD余额: ${usd_balance}")
-            
+                print(f"💰 当前USD余额: {usd_balance}")
+                logging.info(f"USD balance: {usd_balance}")
+    
         except Exception as e:
-            print(f"交易循环错误: {e}")
+            print(f"⚠️ 交易循环错误: {e}")
+            logging.exception(f"交易循环异常: {e}")
 
     def run_continuous(self):
         """持续运行"""
